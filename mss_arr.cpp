@@ -37,14 +37,14 @@ int main(int argc, char **argv) {
     int **subarr = new int*[nlns];
 	int *subarr_size = new int[nlns];
 	
-	for (int i = 0; i < nlns; ++i) {
+    for (int i = 0; i < nlns; ++i) {
         int size = v_int[i].size();
         int *arr = new int[size];
         for (int j = 0; j < size; ++j)
             arr[j] = v_int[i][j];
 		
-		int l_idx, h_idx, sum;
-		mss_divconq(arr, 0, size - 1, &sum, &l_idx, &h_idx); //  subarray
+		int l_idx, h_idx;
+		mss_divconq(arr, 0, size - 1, &l_idx, &h_idx); // subarray
 		subarr_size[i] = h_idx - l_idx + 1;
 		subarr[i] = new int[subarr_size[i]];
 		for (int k = 0; k < subarr_size[i]; ++k)
@@ -54,29 +54,7 @@ int main(int argc, char **argv) {
         
 		delete[] arr;
     }
-	
-	/*
-    for (int i = 0; i < nlns; ++i) {
-        int size = v_int[i].size();
-        int *arr = new int[size];
-        for (int j = 0; j < size; ++j)
-            arr[j] = v_int[i][j];
-		
-		int l_idx, h_idx;
-		l_idx = h_idx = 0;
-		maxsum[i] = mss_linear(arr, size, &l_idx, &h_idx);
-        
-		l_idx = (l_idx > h_idx) ? 0 : l_idx;
-		//std::cout << "l idx: " << l_idx << " | h idx: " << h_idx << std::endl;
-		subarr_size[i] = h_idx - l_idx + 1;
-		subarr[i] = new int[subarr_size[i]];
-		for (int k = 0; k < subarr_size[i]; ++k)
-			subarr[i][k] = arr[k + l_idx];
-		
-		delete[] arr;
-    }
-    */
-	
+    
     output(fout_name, v_int, &nlns, maxsum, subarr, subarr_size);
     
     delete[] maxsum;
@@ -87,7 +65,7 @@ int main(int argc, char **argv) {
     
     
     // experimental analysis
-    int arr_size[] = {100, 400, 800, 1200, 1500};
+	int arr_size[] = {100, 400, 800, 1200, 1500, 2000};
     experiment(arr_size, sizeof(arr_size) / sizeof(arr_size[0]));
 
     return 0;
@@ -109,7 +87,7 @@ void experiment(int *arr_size, int size) {
         results[i][0] = mss_enum(input_r[i], arr_size[i]);
         t = clock() - t;
 		durs[i][0] = (float)t / CLOCKS_PER_SEC;
-        sleep(1); // make the programme waiting for 2 secondes
+        sleep(1); // make the programme waiting for 1 second
         t = clock();    
         results[i][1] = mss_enum2(input_r[i], arr_size[i]);
         t = clock() - t;
@@ -414,64 +392,53 @@ int max(int a, int b) {
 }
 
 
-void mss_cross(int *arr, int l, int h, int *sum, int *l_idx, int *h_idx) {
-    int current_sum = 0;
-    int l_sum = INT_MIN;
-    int r_sum = INT_MIN;
-    int mid = (l + h) / 2;
-
-    for (int i = mid; i >= l; --i) {
-        current_sum += arr[i];
-        if (current_sum > l_sum) {
-            l_sum = current_sum;
-            *l_idx = i;
-        }
+int mss_divconq(int *arr, int l, int h, int *pl, int *ph) {
+    if (l == h) {
+		*pl = *ph = l;
+        return arr[l];
     }
-
-    current_sum = 0;
-    for (int i = mid + 1; i <= h; ++i) {
-        current_sum += arr[i];
-        if (current_sum > r_sum) {
-            r_sum = current_sum;
-            *h_idx = i;
-        }
+    int m = (l + h) / 2;
+	int l_low, l_high, r_low, r_high;
+    int max_left = mss_divconq(arr, l, m, &l_low, &l_high);
+    int max_right = mss_divconq(arr, m + 1, h, &r_low, &r_high);
+    int max_cross = mss_cross(arr, l, m, h, pl, ph);
+	
+	if (max_left > max_right && max_left > max_cross) {
+        *pl = l_low;
+        *ph = l_high;
     }
-
-    *sum = l_sum + r_sum;
+    else if (max_right > max_left && max_right > max_cross) {
+        *pl = r_low;
+        *ph = r_high;
+    }
+    else if (max_cross > max_right && max_cross > max_left); // already done in mss_cross function
+	else {
+		*pl = l_low;
+        *ph = l_high;
+	}
+	
+    return max(max(max_left, max_right), max_cross);
 }
 
-void mss_divconq(int *arr, int l, int h, int *sum, int *l_idx, int *h_idx) {
-    if (l == h) {
-        *sum = arr[l];
-        *l_idx = *h_idx = l;
-    }
-    else {
-        int mid = (l + h) / 2;
-        int l_low, l_high, l_sum, r_low, r_high, r_sum, m_low, m_high, m_sum;
-
-        mss_divconq(arr, l, mid, &l_sum, &l_low, &l_high);
-        mss_divconq(arr, mid + 1, h, &r_sum, &r_low, &r_high);
-        mss_cross(arr, l, h, &m_sum, &m_low, &m_high);
-        
-        if (l_sum > r_sum && l_sum > m_sum) {
-            *sum = l_sum;
-            *l_idx = l_low;
-            *h_idx = l_high;
-        }
-        else if(r_sum > l_sum && r_sum > m_sum) {
-            *sum = r_sum;
-            *l_idx = r_low;
-            *h_idx = r_high;
-        }
-        else if(m_sum > r_sum && m_sum > l_sum) {
-            *sum = m_sum;
-            *l_idx = m_low;
-            *h_idx = m_high;
-        }
-		else {
-			*sum = l_sum;
-            *l_idx = l_low;
-            *h_idx = l_high;
+int mss_cross(int *arr, int l, int m, int h, int *pl, int *ph) {
+    int sum_left, sum_right, sum;
+    sum_left = sum_right = INT_MIN;
+    sum = 0;
+    for (int i = m; i >= l; --i) {
+        sum += arr[i];
+		if (sum > sum_left) {
+			sum_left = sum;
+			*pl = i;
 		}
     }
+    sum = 0;
+    for (int j = m + 1; j <= h; ++j) {
+        sum += arr[j];
+		if (sum > sum_right) {
+			sum_right = sum;
+			*ph = j;
+		}
+    }
+	
+    return sum_left + sum_right;
 }
