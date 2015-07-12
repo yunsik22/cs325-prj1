@@ -37,6 +37,25 @@ int main(int argc, char **argv) {
     int **subarr = new int*[nlns];
 	int *subarr_size = new int[nlns];
 	
+	for (int i = 0; i < nlns; ++i) {
+        int size = v_int[i].size();
+        int *arr = new int[size];
+        for (int j = 0; j < size; ++j)
+            arr[j] = v_int[i][j];
+		
+		int l_idx, h_idx, sum;
+		mss_divconq(arr, 0, size - 1, &sum, &l_idx, &h_idx); //  subarray
+		subarr_size[i] = h_idx - l_idx + 1;
+		subarr[i] = new int[subarr_size[i]];
+		for (int k = 0; k < subarr_size[i]; ++k)
+			subarr[i][k] = arr[k + l_idx];
+			
+		maxsum[i] = mss_linear(arr, size, &l_idx, &h_idx); // max sum
+        
+		delete[] arr;
+    }
+	
+	/*
     for (int i = 0; i < nlns; ++i) {
         int size = v_int[i].size();
         int *arr = new int[size];
@@ -56,7 +75,8 @@ int main(int argc, char **argv) {
 		
 		delete[] arr;
     }
-    
+    */
+	
     output(fout_name, v_int, &nlns, maxsum, subarr, subarr_size);
     
     delete[] maxsum;
@@ -448,5 +468,10 @@ void mss_divconq(int *arr, int l, int h, int *sum, int *l_idx, int *h_idx) {
             *l_idx = m_low;
             *h_idx = m_high;
         }
+		else {
+			*sum = l_sum;
+            *l_idx = l_low;
+            *h_idx = l_high;
+		}
     }
 }
